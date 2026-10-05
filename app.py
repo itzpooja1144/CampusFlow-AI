@@ -3,19 +3,35 @@ import sqlite3
 import joblib
 import pandas as pd
 import uuid
+import os
 from datetime import datetime
 
 app = Flask(__name__)
 
-DATABASE = "database/campus.db"
+# ============================================================
+# DATABASE PATH
+# ============================================================
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_DIR = os.path.join(BASE_DIR, "database")
+
+# Create database folder if it does not exist
+os.makedirs(DATABASE_DIR, exist_ok=True)
+
+DATABASE = os.path.join(DATABASE_DIR, "campus.db")
 
 
 # ============================================================
 # LOAD AI MODELS
 # ============================================================
 
-linear_model = joblib.load("ml/linear_model.pkl")
-logistic_model = joblib.load("ml/logistic_model.pkl")
+linear_model = joblib.load(
+    os.path.join(BASE_DIR, "ml", "linear_model.pkl")
+)
+
+logistic_model = joblib.load(
+    os.path.join(BASE_DIR, "ml", "logistic_model.pkl")
+)
 
 
 # ============================================================
@@ -23,8 +39,11 @@ logistic_model = joblib.load("ml/logistic_model.pkl")
 # ============================================================
 
 def get_db():
+
     conn = sqlite3.connect(DATABASE)
+
     conn.row_factory = sqlite3.Row
+
     return conn
 
 
@@ -82,11 +101,6 @@ def create_tables():
 
     # --------------------------------------------------------
     # STUDENTS
-    #
-    # inside = 1  -> currently inside campus
-    # inside = 0  -> currently outside campus
-    #
-    # facility_id -> current facility
     # --------------------------------------------------------
 
     conn.execute("""
@@ -106,6 +120,7 @@ def create_tables():
     conn.close()
 
 
+# Create tables when application starts
 create_tables()
 
 
@@ -149,17 +164,10 @@ def home():
 
     conn = get_db()
 
-    # --------------------------------------------------------
-    # REAL CURRENT FACILITY OCCUPANCY
-    # --------------------------------------------------------
-
     facilities_db = get_facility_occupancy(conn)
 
     # --------------------------------------------------------
     # TOTAL REGISTERED STUDENTS
-    #
-    # Example:
-    # 670 registered students
     # --------------------------------------------------------
 
     total_students = conn.execute("""
@@ -168,9 +176,7 @@ def home():
     """).fetchone()[0]
 
     # --------------------------------------------------------
-    # STUDENTS CURRENTLY INSIDE CAMPUS
-    #
-    # This changes automatically after check-in / checkout.
+    # STUDENTS CURRENTLY INSIDE
     # --------------------------------------------------------
 
     total_students_inside = conn.execute("""
@@ -180,7 +186,7 @@ def home():
     """).fetchone()[0]
 
     # --------------------------------------------------------
-    # REAL MOVEMENT IN LAST 30 MINUTES
+    # MOVEMENT IN LAST 30 MINUTES
     # --------------------------------------------------------
 
     latest_activity = conn.execute("""
@@ -222,7 +228,6 @@ def home():
 
     # --------------------------------------------------------
     # LINEAR REGRESSION
-    # NEXT FLOW PREDICTION
     # --------------------------------------------------------
 
     linear_input = pd.DataFrame([{
@@ -277,7 +282,7 @@ def home():
         )
 
         capacity = int(
-            facility["capacity"]
+            facility["capacity"] or 0
         )
 
         # ----------------------------------------------------
@@ -293,13 +298,20 @@ def home():
         else:
 
             occupancy_ratio = 0
-            occupancy_percentage = round(
-            occupancy_ratio * 100,
-    1
-)
 
         # ----------------------------------------------------
-        # MODEL INPUT
+        # OCCUPANCY PERCENTAGE
+        # IMPORTANT:
+        # Defined BEFORE Logistic Prediction
+        # ----------------------------------------------------
+
+        occupancy_percentage = round(
+            occupancy_ratio * 100,
+            1
+        )
+
+        # ----------------------------------------------------
+        # LOGISTIC MODEL INPUT
         # ----------------------------------------------------
 
         logistic_input = pd.DataFrame([{
@@ -321,6 +333,10 @@ def home():
 
         }])
 
+        # Default values
+        prediction = 0
+        probability = 0
+
         try:
 
             prediction = logistic_model.predict(
@@ -338,17 +354,22 @@ def home():
                 2
             )
 
+            # ------------------------------------------------
+            # RISK STATUS
+            # ------------------------------------------------
+
             if prediction == 1:
 
-              risk_status = "Overcrowding Risk"
+                risk_status = "Overcrowding Risk"
 
             elif occupancy_percentage >= 70:
 
-             risk_status = "Medium Risk"
+                risk_status = "Medium Risk"
 
             else:
 
-             risk_status = "Low Risk"
+                risk_status = "Low Risk"
+
         except Exception as e:
 
             print(
@@ -371,24 +392,24 @@ def home():
         )
 
         # ----------------------------------------------------
-        # OCCUPANCY PERCENTAGE
-        # ----------------------------------------------------
-
-        occupancy_percentage = round(
-            occupancy_ratio * 100,
-            1
-        )
-
-        # ----------------------------------------------------
         # AI CROWD LEVEL
         # ----------------------------------------------------
 
         if prediction == 1:
+
             crowd_level = "High Crowd"
+
         elif occupancy_percentage >= 70:
+
             crowd_level = "Medium Crowd"
+
         else:
+
             crowd_level = "Low Crowd"
+
+        # ----------------------------------------------------
+        # ADD FACILITY DATA
+        # ----------------------------------------------------
 
         facilities.append({
 
@@ -415,38 +436,32 @@ def home():
 
             "risk_probability":
                 probability
+
         })
 
     conn.close()
 
     # --------------------------------------------------------
-    # SEND DATA TO DASHBOARD
+    # DASHBOARD
     # --------------------------------------------------------
 
     return render_template(
 
         "index.html",
 
-        facilities=
-            facilities,
+        facilities=facilities,
 
-        predicted_flow=
-            predicted_flow,
+        predicted_flow=predicted_flow,
 
-        inflow=
-            inflow,
+        inflow=inflow,
 
-        outflow=
-            outflow,
+        outflow=outflow,
 
-        total_flow=
-            total_flow,
+        total_flow=total_flow,
 
-        total_students_inside=
-            total_students_inside,
+        total_students_inside=total_students_inside,
 
-        total_students=
-            total_students
+        total_students=total_students
     )
 
 
@@ -485,7 +500,7 @@ def checkin():
         )
 
     # --------------------------------------------------------
-    # GET FORM DATA
+    # FORM DATA
     # --------------------------------------------------------
 
     student_name = request.form.get(
@@ -511,9 +526,17 @@ def checkin():
             + uuid.uuid4().hex[:10].upper()
         )
 
-    facility_id = int(
-        request.form["facility_id"]
-    )
+    try:
+
+        facility_id = int(
+            request.form["facility_id"]
+        )
+
+    except (ValueError, KeyError):
+
+        conn.close()
+
+        return "Invalid facility!"
 
     # --------------------------------------------------------
     # FIND STUDENT
@@ -567,9 +590,16 @@ def checkin():
 
         conn.close()
 
+        if current_facility:
+
+            return (
+                f"{student_id} is already inside "
+                f"{current_facility['name']}. "
+                "Please check out first."
+            )
+
         return (
-            f"{student_id} is already inside "
-            f"{current_facility['name']}. "
+            f"{student_id} is already inside. "
             "Please check out first."
         )
 
@@ -596,7 +626,7 @@ def checkin():
     )
 
     # --------------------------------------------------------
-    # CURRENT REAL FACILITY OCCUPANCY
+    # CURRENT FACILITY OCCUPANCY
     # --------------------------------------------------------
 
     current = conn.execute("""
@@ -631,9 +661,6 @@ def checkin():
 
     # --------------------------------------------------------
     # UPDATE STUDENT
-    #
-    # Student is now inside campus
-    # and located at selected facility.
     # --------------------------------------------------------
 
     conn.execute("""
@@ -676,7 +703,7 @@ def checkin():
     ))
 
     # --------------------------------------------------------
-    # SAVE REAL CHECK-IN FLOW
+    # SAVE CHECK-IN FLOW
     # --------------------------------------------------------
 
     conn.execute("""
@@ -689,10 +716,9 @@ def checkin():
             timestamp
         )
 
-        VALUES (?, 1, ?, ?, ?)
+        VALUES (?, 1, 0, ?, ?)
     """, (
         facility_id,
-        0,
         current + 1,
         current_time
     ))
@@ -741,9 +767,16 @@ def checkout():
     # FORM DATA
     # --------------------------------------------------------
 
-    student_id = request.form[
-        "student_id"
-    ].strip()
+    student_id = request.form.get(
+        "student_id",
+        ""
+    ).strip()
+
+    if not student_id:
+
+        conn.close()
+
+        return "Student ID is required!"
 
     # --------------------------------------------------------
     # FIND CURRENT STUDENT
@@ -769,7 +802,7 @@ def checkout():
         )
 
     # --------------------------------------------------------
-    # GET ACTUAL FACILITY
+    # ACTUAL FACILITY
     # --------------------------------------------------------
 
     actual_facility_id = student[
@@ -843,8 +876,6 @@ def checkout():
 
     # --------------------------------------------------------
     # UPDATE STUDENT
-    #
-    # Student has now left campus.
     # --------------------------------------------------------
 
     conn.execute("""
@@ -881,7 +912,7 @@ def checkout():
         ))
 
     # --------------------------------------------------------
-    # SAVE REAL CHECK-OUT FLOW
+    # SAVE CHECK-OUT FLOW
     # --------------------------------------------------------
 
     conn.execute("""
@@ -916,10 +947,6 @@ def students():
 
     conn = get_db()
 
-    # --------------------------------------------------------
-    # GET ALL STUDENTS + CURRENT LOCATION
-    # --------------------------------------------------------
-
     student_rows = conn.execute("""
         SELECT
 
@@ -943,18 +970,10 @@ def students():
         ORDER BY s.student_id
     """).fetchall()
 
-    # --------------------------------------------------------
-    # TOTAL REGISTERED
-    # --------------------------------------------------------
-
     total_students = conn.execute("""
         SELECT COUNT(*)
         FROM students
     """).fetchone()[0]
-
-    # --------------------------------------------------------
-    # CURRENTLY INSIDE
-    # --------------------------------------------------------
 
     total_inside = conn.execute("""
         SELECT COUNT(*)
@@ -968,14 +987,11 @@ def students():
 
         "students.html",
 
-        students=
-            student_rows,
+        students=student_rows,
 
-        total_students=
-            total_students,
+        total_students=total_students,
 
-        total_inside=
-            total_inside
+        total_inside=total_inside
     )
 
 
@@ -991,7 +1007,11 @@ def analytics():
     # --------------------------------------------------------
 
     df = pd.read_csv(
-        "data/calit2_ml.csv"
+        os.path.join(
+            BASE_DIR,
+            "data",
+            "calit2_ml.csv"
+        )
     )
 
     chart_data = df.tail(30).copy()
@@ -1123,17 +1143,16 @@ def analytics():
 
             overcrowded_count += 1
 
-    campus_percentage = (
+    if total_capacity > 0:
 
-        (
+        campus_percentage = (
             total_occupancy
             / total_capacity
         ) * 100
 
-        if total_capacity > 0
+    else:
 
-        else 0
-    )
+        campus_percentage = 0
 
     conn.close()
 
@@ -1145,41 +1164,30 @@ def analytics():
 
         "analytics.html",
 
-        predicted_flow=
-            predicted_flow,
+        predicted_flow=predicted_flow,
 
-        inflow=
-            inflow,
+        inflow=inflow,
 
-        outflow=
-            outflow,
+        outflow=outflow,
 
-        current_flow=
-            current_flow,
+        current_flow=current_flow,
 
-        total_occupancy=
-            total_occupancy,
+        total_occupancy=total_occupancy,
 
-        total_students_inside=
-            total_students_inside,
+        total_students_inside=total_students_inside,
 
-        total_students=
-            total_students,
+        total_students=total_students,
 
-        total_capacity=
-            total_capacity,
+        total_capacity=total_capacity,
 
-        campus_percentage=
-            round(
-                campus_percentage,
-                1
-            ),
+        campus_percentage=round(
+            campus_percentage,
+            1
+        ),
 
-        overcrowded_count=
-            overcrowded_count,
+        overcrowded_count=overcrowded_count,
 
-        facilities=
-            facilities,
+        facilities=facilities,
 
         chart_labels=
             chart_data["time"].tolist(),
@@ -1209,6 +1217,16 @@ if __name__ == "__main__":
 
     create_tables()
 
+    # Render provides the PORT environment variable.
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
     app.run(
-        debug=True
+        host="0.0.0.0",
+        port=port,
+        debug=False
     )
