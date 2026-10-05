@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusFlow - Check Out</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>🎓 CampusFlow AI</h1>
+        <p>Student Facility Check-Out</p>
+    </div>
+
+    <div class="facility-card">
+
+        <h2>📍 Student Check-Out</h2>
+
+        <p style="margin: 20px 0;">
+            Enter your Student ID and select the facility.
+        </p>
+
+        <form method="POST" action="/checkout">
+
+            <input
+                type="text"
+                name="student_id"
+                placeholder="Enter Student ID"
+                required
+                style="
+                    padding: 12px;
+                    width: 100%;
+                    margin-bottom: 15px;
+                "
+            >
+
+            <select
+                name="facility_id"
+                required
+                style="
+                    padding: 12px;
+                    width: 100%;
+                    margin-bottom: 15px;
+                "
+            >
+
+                <option value="" disabled selected>
+                    Select Facility
+                </option>
+
+                {% for facility in facilities %}
+
+                    <option value="{{ facility['id'] }}">
+                        {{ facility['name'] }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+            <button
+                type="submit"
+                style="
+                    padding: 12px 25px;
+                    cursor: pointer;
+                    border: none;
+                    border-radius: 8px;
+                "
+            >
+                🚪 Check Out
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

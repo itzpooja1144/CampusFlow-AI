@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>CampusFlow AI Analytics</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>📊 CampusFlow AI Analytics</h1>
+
+        <p>
+            Intelligent Campus Flow & Occupancy Analysis
+        </p>
+
+        <div class="dashboard-actions">
+
+            <a href="/" class="action-btn">
+                🏠 Dashboard
+            </a>
+
+            <a href="/checkin"
+               class="action-btn checkin-btn">
+                ➕ Check-In
+            </a>
+
+            <a href="/checkout"
+               class="action-btn checkout-btn">
+                ➖ Check-Out
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <!-- SUMMARY CARDS -->
+
+    <div class="analytics-grid">
+
+        <div class="analytics-card">
+
+            <h3>📈 Next 30-Min Flow</h3>
+
+            <div class="analytics-number">
+                {{ predicted_flow }}
+            </div>
+
+            <p>AI predicted people flow</p>
+
+        </div>
+
+
+        <div class="analytics-card">
+
+            <h3>👥 Current Flow</h3>
+
+            <div class="analytics-number">
+                {{ current_flow }}
+            </div>
+
+            <p>
+                In: {{ inflow }}
+                |
+                Out: {{ outflow }}
+            </p>
+
+        </div>
+
+
+        <div class="analytics-card">
+
+            <h3>🏫 Campus Occupancy</h3>
+
+            <div class="analytics-number">
+                {{ campus_percentage }}%
+            </div>
+
+            <p>
+                {{ total_occupancy }}
+                /
+                {{ total_capacity }}
+                students
+            </p>
+
+        </div>
+
+
+        <div class="analytics-card">
+
+            <h3>🚨 Risk Facilities</h3>
+
+            <div class="analytics-number">
+                {{ overcrowded_count }}
+            </div>
+
+            <p>
+                Facilities above 90%
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- FLOW CHART -->
+
+    <div class="chart-card">
+
+        <h2>📈 People Flow — Recent Records</h2>
+
+        <canvas id="flowChart"></canvas>
+
+    </div>
+
+
+    <!-- FACILITY ANALYSIS -->
+
+    <div class="analytics-section">
+
+        <h2>🏫 Facility Occupancy Analysis</h2>
+
+        <div class="analytics-facilities">
+
+            {% for facility in facilities %}
+
+            {% set percentage =
+                (facility["current_occupancy"]
+                / facility["capacity"] * 100)
+            %}
+
+            <div class="analytics-facility">
+
+                <div class="facility-top">
+
+                    <strong>
+                        {{ facility["name"] }}
+                    </strong>
+
+                    <span>
+                        {{ percentage|round(1) }}%
+                    </span>
+
+                </div>
+
+
+                <div class="analytics-bar">
+
+                    <div
+                        class="analytics-bar-fill"
+                        style="width:
+                        {{ [percentage, 100]|min }}%;">
+                    </div>
+
+                </div>
+
+
+                <div class="facility-details">
+
+                    {{ facility["current_occupancy"] }}
+                    /
+                    {{ facility["capacity"] }}
+
+                    students
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+
+
+    <!-- AI INFORMATION -->
+
+    <div class="ai-panel">
+
+        <h2>🤖 AI Decision Support</h2>
+
+        <div class="ai-stats">
+
+            <div class="ai-box">
+
+                <h3>Linear Regression</h3>
+
+                <div class="ai-status">
+                    Active
+                </div>
+
+                <p>
+                    Predicts people flow for the next
+                    30 minutes.
+                </p>
+
+            </div>
+
+
+            <div class="ai-box">
+
+                <h3>Logistic Regression</h3>
+
+                <div class="ai-status">
+                    Active
+                </div>
+
+                <p>
+                    Detects potential overcrowding
+                    conditions.
+                </p>
+
+            </div>
+
+
+            <div class="ai-box">
+
+                <h3>SQLite Database</h3>
+
+                <div class="ai-status">
+                    Connected
+                </div>
+
+                <p>
+                    Stores facilities, occupancy
+                    and student sessions.
+                </p>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="footer">
+
+        <p>
+            CampusFlow AI • Intelligent Campus Resource
+            & Crowd Management System
+        </p>
+
+    </div>
+
+</div>
+
+
+<script>
+
+const labels =
+    {{ chart_labels | tojson }};
+
+const inflow =
+    {{ chart_inflow | tojson }};
+
+const outflow =
+    {{ chart_outflow | tojson }};
+
+const totalFlow =
+    {{ chart_total | tojson }};
+
+
+const ctx =
+    document.getElementById("flowChart");
+
+
+new Chart(ctx, {
+
+    type: "line",
+
+    data: {
+
+        labels: labels,
+
+        datasets: [
+
+            {
+                label: "Inflow",
+                data: inflow,
+
+                tension: 0.3,
+
+                borderWidth: 2,
+
+                fill: false
+            },
+
+            {
+                label: "Outflow",
+                data: outflow,
+
+                tension: 0.3,
+
+                borderWidth: 2,
+
+                fill: false
+            },
+
+            {
+                label: "Total Flow",
+                data: totalFlow,
+
+                tension: 0.3,
+
+                borderWidth: 3,
+
+                fill: false
+            }
+
+        ]
+
+    },
+
+    options: {
+
+        responsive: true,
+
+        plugins: {
+
+            legend: {
+                position: "bottom"
+            }
+
+        },
+
+        scales: {
+
+            y: {
+
+                beginAtZero: true
+
+            }
+
+        }
+
+    }
+
+});
+
+</script>
+
+</body>
+
+</html>

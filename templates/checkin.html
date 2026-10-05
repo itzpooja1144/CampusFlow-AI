@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CampusFlow - Check In</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>🎓 CampusFlow AI</h1>
+        <p>Student Facility Check-In</p>
+    </div>
+
+
+    <div class="facility-card">
+
+        <h2>📍 Student Check-In</h2>
+
+        <p style="margin: 20px 0;">
+            Enter your name and optionally provide a Student ID.
+        </p>
+
+
+        <form method="POST" action="/checkin">
+
+
+            <!-- Student Name -->
+
+            <input
+                type="text"
+                name="student_name"
+                placeholder="Enter Student Name"
+                required
+                style="
+                    padding: 12px;
+                    width: 100%;
+                    margin-bottom: 15px;
+                "
+            >
+
+
+            <!-- Optional Student ID -->
+
+            <input
+                type="text"
+                name="student_id"
+                placeholder="Enter Student ID (optional)"
+                style="
+                    padding: 12px;
+                    width: 100%;
+                    margin-bottom: 15px;
+                "
+            >
+
+
+            <!-- Facility Selection -->
+
+            <select
+                name="facility_id"
+                required
+                style="
+                    padding: 12px;
+                    width: 100%;
+                    margin-bottom: 15px;
+                "
+            >
+
+                <option value="" disabled selected>
+                    Select Facility
+                </option>
+
+
+                {% for facility in facilities %}
+
+                    <option value="{{ facility['id'] }}">
+                        {{ facility['name'] }}
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <!-- Check In Button -->
+
+            <button
+                type="submit"
+                style="
+                    padding: 12px 25px;
+                    cursor: pointer;
+                    border: none;
+                    border-radius: 8px;
+                "
+            >
+                ✅ Check In
+            </button>
+
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

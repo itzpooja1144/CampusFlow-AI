@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow AI | Smart Campus Command Center</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="app-shell">
+        <aside class="sidebar">
+            <div class="brand-block">
+                <div class="brand-mark">CF</div>
+                <div>
+                    <strong>CampusFlow <span>AI</span></strong>
+                    <small>Smarter Campus. Better Decisions.</small>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Campus navigation">
+                <span class="nav-label">WORKSPACE</span>
+                <a class="nav-item active" href="#dashboard"><span>🏠</span>Dashboard</a>
+                <a class="nav-item" href="#occupancy"><span>👥</span>Live Occupancy</a>
+                <a class="nav-item" href="#prediction"><span>📈</span>Predictions</a>
+                <a class="nav-item" href="#risk-analysis"><span>⚠</span>Risk Analysis</a>
+                <a class="nav-item" href="#facilities"><span>🏢</span>Facilities</a>
+                <a class="nav-item" href="#what-if"><span>🔀</span>What-if Simulator</a>
+                <a class="nav-item" href="#decision-center"><span>🤖</span>AI Decision Center</a>
+                <span class="nav-label nav-label-spaced">REPORTING</span>
+                <a class="nav-item" href="#reports"><span>📄</span>Reports</a>
+                <a class="nav-item" href="#settings"><span>⚙</span>Settings</a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="eyebrow">POWERED BY</span>
+                <strong>Machine Learning</strong>
+                <div class="model-list"><span>• Linear Regression</span><span>• Logistic Regression</span></div>
+            </div>
+        </aside>
+
+        <main class="main-content" id="dashboard">
+            <header class="topbar">
+                <div class="mobile-brand">CampusFlow <span>AI</span></div>
+                <label class="search-box"><span>⌕</span><input type="search" placeholder="Search facilities, departments, rooms..."></label>
+                <div class="topbar-actions">
+                    <button class="icon-button" type="button" aria-label="Notifications">🔔<i></i></button>
+                    <div class="weather"><span>☀</span><div><strong>24°C</strong><small>Clear campus</small></div></div>
+                    <div class="user-menu"><span class="avatar">P</span><div><strong>Pooja</strong><small>Student</small></div><span class="chevron">⌄</span></div>
+                </div>
+            </header>
+
+            <section class="hero-section" aria-labelledby="hero-title">
+                <div class="hero-content">
+                    <span class="eyebrow">SMART CAMPUS MANAGEMENT</span>
+                    <h1 id="hero-title">CampusFlow <span>AI</span></h1>
+                    <p>Real-time insights, smarter decisions.<br>A better campus experience.</p>
+                    <div class="hero-features"><span><i class="feature-dot cyan"></i>Live Monitoring</span><span><i class="feature-dot purple"></i>ML Predictions</span><span><i class="feature-dot orange"></i>Crowd Control</span><span><i class="feature-dot green"></i>Resource Planning</span></div>
+                    <div class="hero-actions"><a class="primary-action" href="/checkin">＋ Student Check-In</a><a class="secondary-action" href="/checkout">− Student Check-Out</a></div>
+                </div>
+                <div class="hero-image"><img src="{{ url_for('static', filename='images/campus.jpg') }}" alt="College campus"><div class="image-overlay"></div><span class="hero-image-label">CAMPUS OPERATIONS <b>LIVE</b></span></div>
+            </section>
+
+            <section class="summary-grid" id="occupancy" aria-label="Facility occupancy summary">
+                {% for facility in facilities %}
+                <article class="summary-card" data-map-target="map-{{ facility['name']|lower|replace(' ', '-') }}" onclick="document.getElementById(this.dataset.mapTarget).scrollIntoView({ behavior: 'smooth', block: 'center' });" style="cursor: pointer;">
+                    <div class="summary-heading"><span class="facility-icon {% if facility['name'] == 'Library' %}icon-cyan{% elif facility['name'] == 'Canteen' %}icon-orange{% elif facility['name'] == 'Parking' %}icon-purple{% elif facility['name'] == 'Lab' %}icon-green{% else %}icon-blue{% endif %}">{% if facility['name'] == 'Library' %}📚{% elif facility['name'] == 'Canteen' %}🍽{% elif facility['name'] == 'Parking' %}▣{% elif facility['name'] == 'Lab' %}⚗{% else %}▦{% endif %}</span><span class="summary-name">{{ facility["name"] }}</span><span class="status-dot {% if facility['occupancy_percentage'] >= 80 %}status-red{% elif facility['occupancy_percentage'] >= 50 %}status-orange{% else %}status-green{% endif %}"></span></div>
+                    <div class="summary-number">{{ facility["current_occupancy"] }} <small>/ {{ facility["capacity"] }}</small></div>
+                    <div class="summary-meta"><span>{{ facility["occupancy_percentage"] }}% occupancy</span><span>{{ facility["capacity_remaining"] }} free</span></div>
+                    <div class="progress-track"><div class="progress-fill {% if facility['occupancy_percentage'] >= 80 %}fill-red{% elif facility['occupancy_percentage'] >= 50 %}fill-orange{% else %}fill-cyan{% endif %}" style="width: {{ [facility['occupancy_percentage'], 100]|min }}%;"></div></div>
+                </article>
+                {% endfor %}
+            </section>
+
+            <section class="workspace-grid">
+                <article class="dashboard-card map-card" id="facilities">
+                    <div class="card-heading"><div><span class="eyebrow">LIVE MONITORING</span><h2>📍 Campus Map – Live Occupancy</h2><p>Real-time facility occupancy across campus</p></div><span class="live-pill"><i></i> Live</span></div>
+                    <div class="campus-map">
+                        <img class="campus-map-image" src="{{ url_for('static', filename='images/campus.jpg') }}" alt="Campus occupancy map">
+                        {% for facility in facilities %}
+                            {% if facility["name"] == "Library" %}<div id="map-{{ facility['name']|lower|replace(' ', '-') }}" class="map-marker library-marker">
+                            {% elif facility["name"] == "Canteen" %}<div id="map-{{ facility['name']|lower|replace(' ', '-') }}" class="map-marker canteen-marker">
+                            {% elif facility["name"] == "Parking" %}<div id="map-{{ facility['name']|lower|replace(' ', '-') }}" class="map-marker parking-marker">
+                            {% elif facility["name"] == "Lab" %}<div id="map-{{ facility['name']|lower|replace(' ', '-') }}" class="map-marker lab-marker">
+                            {% elif facility["name"] == "Admin Office" %}<div id="map-{{ facility['name']|lower|replace(' ', '-') }}" class="map-marker admin-marker">
+                            {% endif %}
+                                {% if facility["name"] in ["Library", "Canteen", "Parking", "Lab", "Admin Office"] %}
+                                <div class="map-marker-label"><span class="marker-icon">{% if facility['name'] == 'Library' %}📚{% elif facility['name'] == 'Canteen' %}🍽{% elif facility['name'] == 'Parking' %}▣{% elif facility['name'] == 'Lab' %}⚗{% else %}▦{% endif %}</span><span class="marker-info"><strong>{{ facility["name"] }}</strong><b>{{ facility["occupancy_percentage"] }}%</b><small>{{ facility["current_occupancy"] }} / {{ facility["capacity"] }}</small></span></div>
+                                </div>
+                                {% endif %}
+                        {% endfor %}
+                    </div>
+                </article>
+
+                <article class="dashboard-card prediction-card" id="prediction">
+                    <div class="card-heading compact-heading"><div><span class="eyebrow">FORECAST ENGINE</span><h2>7-Day Occupancy Prediction</h2></div><span class="card-menu">•••</span></div>
+                    <div class="prediction-highlight"><div><span>Next 30-min flow</span><strong>{{ predicted_flow }}</strong><small>Expected people flow</small></div><span class="trend-up">↗</span></div>
+                    <div class="chart-wrap" aria-label="Occupancy prediction chart"><div class="chart-y-axis"><span>100%</span><span>75%</span><span>50%</span><span>25%</span><span>0%</span></div><div class="bar-chart"><i style="height: 42%"></i><i style="height: 58%"></i><i style="height: 51%"></i><i class="bar-active" style="height: 74%"></i><i style="height: 64%"></i><i style="height: 82%"></i><i style="height: 70%"></i></div></div>
+                    <div class="chart-days"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div><div class="prediction-foot"><span><i class="legend-dot cyan"></i>Predicted occupancy</span><span>↑ 12.4%</span></div>
+                </article>
+            </section>
+
+            <section class="analytics-grid" id="risk-analysis">
+                <article class="dashboard-card facility-analytics-card" id="facility-wise-occupancy" onclick="document.getElementById('facility-wise-occupancy').scrollIntoView({ behavior: 'smooth' });" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" role="button" tabindex="0" style="cursor: pointer;"><div class="card-heading compact-heading"><div><span class="eyebrow">SPACE UTILIZATION</span><h2>Facility-wise Occupancy</h2></div><span class="card-menu">•••</span></div><div class="facility-bars">
+                    {% for facility in facilities %}<div class="facility-bar-row"><span class="bar-name">{{ facility["name"] }}</span><div class="mini-track"><span style="width: {{ [facility['occupancy_percentage'], 100]|min }}%;"></span></div><strong>{{ facility["occupancy_percentage"] }}%</strong></div>{% endfor %}
+                </div></article>
+                <article class="dashboard-card compact-card" id="decision-center" onclick="document.getElementById('decision-center').scrollIntoView({ behavior: 'smooth' });" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" role="button" tabindex="0" style="cursor: pointer;"><span class="tile-icon purple-bg">◈</span><span class="eyebrow">AI DECISION CENTER</span><h2>AI Decision Center</h2><p>Operational recommendations are ready to review.</p><a href="#decision-center">Open center <b>→</b></a></article>
+                <article class="dashboard-card compact-card" id="what-if" onclick="document.getElementById('what-if').scrollIntoView({ behavior: 'smooth' });" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" role="button" tabindex="0" style="cursor: pointer;"><span class="tile-icon orange-bg">⌁</span><span class="eyebrow">SCENARIO PLANNING</span><h2>What-if Simulator</h2><p>Model the impact of campus movement changes.</p><a href="#what-if">Run a scenario <b>→</b></a></article>
+                <article class="dashboard-card compact-card" id="alternative-facilities" onclick="document.getElementById('alternative-facilities').scrollIntoView({ behavior: 'smooth' });" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" role="button" tabindex="0" style="cursor: pointer;"><span class="tile-icon cyan-bg">⇄</span><span class="eyebrow">RECOMMENDATIONS</span><h2>Alternative Facilities</h2><p>Find lower-occupancy spaces for better flow.</p><a href="#occupancy">View suggestions <b>→</b></a></article>
+                <article class="dashboard-card compact-card" id="ml-model-performance" onclick="document.getElementById('ml-model-performance').scrollIntoView({ behavior: 'smooth' });" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.click(); }" role="button" tabindex="0" style="cursor: pointer;"><span class="tile-icon green-bg">✦</span><span class="eyebrow">MODEL HEALTH</span><h2>ML Model Performance</h2><p>Linear and logistic regression models are active.</p><span class="model-health"><i></i> Systems operational</span></article>
+            </section>
+
+            <section class="ai-panel" aria-labelledby="insights-title"><div class="card-heading"><div><span class="eyebrow">INTELLIGENCE LAYER</span><h2 id="insights-title">🤖 CampusFlow AI Insights</h2></div><span class="ai-active"><i></i> AI ACTIVE</span></div><div class="ai-stats">
+                <div class="ai-box"><span class="ai-box-icon cyan-bg">↗</span><div><span>Next 30-Min Flow</span><strong>{{ predicted_flow }}</strong><small>Predicted people flow</small></div></div>
+                <div class="ai-box"><span class="ai-box-icon purple-bg">⇄</span><div><span>Current Flow</span><strong>{{ total_flow }}</strong><small>In: {{ inflow }} &nbsp;|&nbsp; Out: {{ outflow }}</small></div></div>
+                <div class="ai-box"><span class="ai-box-icon orange-bg">♟</span><div><span>Total Students in Campus</span><strong>{{ total_students }}</strong><small>Total registered students</small></div></div>
+                <div class="ai-box"><span class="ai-box-icon green-bg">✓</span><div><span>AI Status</span><strong class="active-text">Active</strong><small>Prediction system running</small></div></div>
+            </div></section>
+
+            <section class="facility-details-section" aria-labelledby="facility-overview-title"><div class="section-title-row"><div><span class="eyebrow">FACILITY OPERATIONS</span><h2 id="facility-overview-title">Facility Overview</h2></div><a href="#occupancy">View all facilities →</a></div><div class="facility-grid">
+                {% for facility in facilities %}
+                {% set percentage = (facility["current_occupancy"] / facility["capacity"] * 100) if facility["capacity"] else 0 %}
+                {% if percentage >= 80 %}{% set status = "High" %}{% set status_class = "high" %}{% elif percentage >= 50 %}{% set status = "Medium" %}{% set status_class = "medium" %}{% else %}{% set status = "Low" %}{% set status_class = "low" %}{% endif %}
+                <article class="facility-card" data-facility-name="{{ facility['name'] }}"><div class="facility-card-top"><h3>{{ facility["name"] }}</h3><span class="status {{ status_class }}">{{ status }}</span></div><div class="occupancy">{{ facility["occupancy_percentage"] }}%</div><div class="capacity">{{ facility["current_occupancy"] }} / {{ facility["capacity"] }} students</div><div class="progress"><div class="progress-bar" style="width: {{ [percentage, 100]|min }}%;"></div></div><div class="facility-details"><p>Capacity remaining <strong>{{ facility["capacity_remaining"] }}</strong></p><p>Risk probability <strong>{{ facility["risk_probability"] }}%</strong></p></div><div class="ai-risk"><span>🤖 AI Crowd Analysis</span>{% if facility["risk_status"] == "Overcrowding Risk" %}<b class="risk danger">Overcrowding Risk</b>{% elif facility["risk_status"] == "Medium Risk" %}<b class="risk medium">Medium Risk</b>{% elif facility["risk_status"] == "Low Risk" %}<b class="risk safe">Low Risk</b>{% else %}<b class="risk">Prediction Error</b>{% endif %}<small>{{ facility["crowd_level"] }}</small></div><div class="facility-actions"><a href="/checkin" class="facility-btn checkin-small">＋ Check In</a><a href="/checkout" class="facility-btn checkout-small">− Check Out</a></div></article>
+                {% endfor %}
+            </div></section>
+            <footer class="footer">© 2026 CampusFlow AI. All rights reserved.</footer>
+        </main>
+
+        <aside class="right-panel">
+            <section class="side-section queue-section"><div class="side-heading"><div><span class="eyebrow">OPERATIONS</span><h2>Live Queue Status</h2></div><span class="live-pill"><i></i> Live</span></div><div class="queue-list">
+                {% for facility in facilities %}<div class="queue-row"><span class="queue-icon {% if facility['name'] == 'Canteen' %}queue-orange{% elif facility['name'] == 'Library' %}queue-cyan{% elif facility['name'] == 'Lab' %}queue-purple{% else %}queue-green{% endif %}"></span><div class="queue-main"><div><strong>{{ facility["name"] }}</strong><span>{{ facility["current_occupancy"] }} people</span></div><div class="queue-track"><i style="width: {{ [facility['occupancy_percentage'], 100]|min }}%;"></i></div></div><b class="queue-arrow">›</b></div>{% endfor %}
+            </div></section>
+
+            <section class="side-section alerts-section"><div class="side-heading"><div><span class="eyebrow">ATTENTION REQUIRED</span><h2>🔔 Smart Alerts</h2></div><span class="alert-count">4</span></div><div class="alert-list">
+                {% for facility in facilities %}{% if facility["risk_status"] == "Overcrowding Risk" %}<div class="alert-card alert-danger"><span>!</span><div><strong>{{ facility["name"] }} crowd level is high</strong><small>High risk of overcrowding</small></div></div>{% elif facility["risk_status"] == "Medium Risk" %}<div class="alert-card alert-warning"><span>!</span><div><strong>{{ facility["name"] }} are getting busy</strong><small>Expected to reach high occupancy</small></div></div>{% else %}<div class="alert-card alert-success"><span>✓</span><div><strong>{{ facility["name"] }} occupancy is stable</strong><small>Good time to visit</small></div></div>{% endif %}{% endfor %}
+            </div></section>
+
+            <section class="side-section quick-section" id="reports"><div class="side-heading"><div><span class="eyebrow">SHORTCUTS</span><h2>⚡ Quick Actions</h2></div></div><div class="quick-action-grid"><a href="#facility-overview-title">▤ <span>View Detailed Reports</span></a><a href="#reports">⇩ <span>Export Data</span></a><a href="#settings">◉ <span>Manage Notifications</span></a><a href="#settings">⚙ <span>Settings</span></a></div></section>
+            <div class="right-panel-note"><span class="note-icon">✦</span><div><strong>AI is watching your campus</strong><small>Occupancy signals update in real time.</small></div></div>
+        </aside>
+    </div>
+    <script src="{{ url_for('static', filename='css/js/app.js') }}"></script>
+</body>
+</html>
